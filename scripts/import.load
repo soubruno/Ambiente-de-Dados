@@ -1,0 +1,151 @@
+LOAD CSV
+     FROM '../output/categories.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE categories
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/developers.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE developers
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/publishers.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE publishers
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/genres.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE genres
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/tags.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE tags
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/languages.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE languages
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/games.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE games
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if ''
+     SET
+          client_encoding to 'utf8';
+
+LOAD CSV
+     FROM '../output/media.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE media
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_developers.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_developers
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_publishers.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_publishers
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_genres.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_genres
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_tags.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_tags
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_categories.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_categories
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_full_audio_languages.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_full_audio_languages
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';
+
+LOAD CSV
+     FROM '../output/game_supported_languages.csv'
+     INTO postgresql://{{POSTGRES_USER}}:{{POSTGRES_PASSWORD}}@{{POSTGRES_HOST}}:{{POSTGRES_PORT}}/{{POSTGRES_DB}}
+     TARGET TABLE game_supported_languages
+     WITH
+          skip header = 1,
+          fields terminated by ',',
+          fields optionally enclosed by '"',
+          null if '';

@@ -1,0 +1,350 @@
+version: 2
+
+models:
+  # ===== DIMENSÃO PRINCIPAL =====
+  - name: stg_games
+    description: "Staging model para jogos com limpeza e transformações básicas"
+    columns:
+      - name: app_id
+        description: "ID único do jogo"
+        tests:
+          - unique
+          - not_null
+      - name: name
+        description: "Nome do jogo limpo"
+        tests:
+          - not_null
+      - name: release_date
+        description: "Data de lançamento validada"
+      - name: current_price
+        description: "Preço atual tratado e validado"
+      - name: estimated_owners_avg
+        description: "Média dos proprietários estimados"
+      - name: popularity_score
+        description: "Score de popularidade calculado"
+      - name: quality_score
+        description: "Score de qualidade combinado"
+      - name: price_category
+        description: "Categoria de preço (Free, Budget, Standard, etc.)"
+      - name: trend_factor_percent
+        description: "Fator de tendência baseado em playtime recente"
+
+  # ===== DIMENSÕES BÁSICAS =====
+  - name: stg_categories
+    description: "Staging model para categorias com estatísticas agregadas"
+    columns:
+      - name: category_id
+        description: "ID da categoria"
+        tests:
+          - unique
+          - not_null
+      - name: category_name
+        description: "Nome da categoria"
+        tests:
+          - not_null
+      - name: total_games
+        description: "Total de jogos na categoria"
+      - name: avg_price
+        description: "Preço médio dos jogos na categoria"
+      - name: popularity_score
+        description: "Score de popularidade da categoria"
+
+  - name: stg_genres
+    description: "Staging model para gêneros com análise detalhada"
+    columns:
+      - name: genre_id
+        description: "ID do gênero"
+        tests:
+          - unique
+          - not_null
+      - name: genre_name
+        description: "Nome do gênero"
+        tests:
+          - not_null
+      - name: total_games
+        description: "Total de jogos no gênero"
+      - name: genre_success_score
+        description: "Score de sucesso do gênero"
+      - name: genre_category
+        description: "Categoria do gênero (Major, Popular, Standard, Niche)"
+      - name: price_profile
+        description: "Perfil de preço do gênero"
+
+  - name: stg_developers
+    description: "Staging model para desenvolvedores com análise de performance"
+    columns:
+      - name: developer_id
+        description: "ID do desenvolvedor"
+        tests:
+          - unique
+          - not_null
+      - name: developer_name
+        description: "Nome do desenvolvedor"
+        tests:
+          - not_null
+      - name: total_games
+        description: "Total de jogos do desenvolvedor"
+      - name: developer_tier
+        description: "Classificação do desenvolvedor"
+      - name: overall_reputation_score
+        description: "Score de reputação geral"
+
+  - name: stg_publishers
+    description: "Staging model para publicadores com análise e categorização"
+    columns:
+      - name: publisher_id
+        description: "ID do publicador"
+        tests:
+          - unique
+          - not_null
+      - name: publisher_name
+        description: "Nome do publicador"
+        tests:
+          - not_null
+      - name: publisher_category
+        description: "Categoria do publicador (AAA, Indie, Mobile/Casual, Other)"
+      - name: is_name_missing
+        description: "Flag indicando se o nome está ausente"
+
+  - name: stg_tags
+    description: "Staging model para tags com categorização e análise"
+    columns:
+      - name: tag_id
+        description: "ID da tag"
+        tests:
+          - unique
+          - not_null
+      - name: tag_name
+        description: "Nome da tag"
+        tests:
+          - not_null
+      - name: tag_category
+        description: "Categoria da tag (Genre, Gameplay Mode, Audience, etc.)"
+      - name: estimated_popularity
+        description: "Popularidade estimada da tag"
+
+  - name: stg_languages
+    description: "Staging model para idiomas com análise regional e de mercado"
+    columns:
+      - name: language_id
+        description: "ID do idioma"
+        tests:
+          - unique
+          - not_null
+      - name: language_name
+        description: "Nome do idioma"
+        tests:
+          - not_null
+      - name: language_family
+        description: "Família do idioma (English, Spanish, Chinese, etc.)"
+      - name: estimated_market_size
+        description: "Tamanho estimado do mercado para o idioma"
+      - name: primary_region
+        description: "Região principal do idioma"
+
+  - name: stg_media
+    description: "Staging model para mídia dos jogos com análise de tipo e qualidade"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: media_url
+        description: "URL da mídia"
+        tests:
+          - not_null
+      - name: media_type
+        description: "Tipo de mídia"
+        tests:
+          - not_null
+      - name: media_category
+        description: "Categoria da mídia (Image, Video, Promotional)"
+      - name: is_primary
+        description: "Flag indicando se é mídia principal"
+      - name: media_priority
+        description: "Prioridade da mídia para exibição"
+
+  # ===== TABELAS DE RELACIONAMENTO (FACT TABLES) =====
+  - name: stg_game_developers
+    description: "Staging model para relacionamento jogos-desenvolvedores"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: developer_id
+        description: "ID do desenvolvedor"
+        tests:
+          - not_null
+      - name: is_primary_developer
+        description: "Flag indicando se é o desenvolvedor principal"
+      - name: developer_order
+        description: "Ordem do desenvolvedor para o jogo"
+      - name: total_developers_for_game
+        description: "Total de desenvolvedores para o jogo"
+
+  - name: stg_game_publishers
+    description: "Staging model para relacionamento jogos-publicadores"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: publisher_id
+        description: "ID do publicador"
+        tests:
+          - not_null
+      - name: is_primary_publisher
+        description: "Flag indicando se é o publicador principal"
+      - name: is_self_published
+        description: "Flag indicando se é auto-publicado"
+      - name: publisher_order
+        description: "Ordem do publicador para o jogo"
+
+  - name: stg_game_genres
+    description: "Staging model para relacionamento jogos-gêneros"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: genre_id
+        description: "ID do gênero"
+        tests:
+          - not_null
+      - name: is_primary
+        description: "Flag indicando se é gênero principal"
+      - name: genre_order
+        description: "Ordem do gênero para o jogo"
+      - name: genre_category
+        description: "Categoria do gênero"
+
+  - name: stg_game_categories
+    description: "Staging model para relacionamento jogos-categorias"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: category_id
+        description: "ID da categoria"
+        tests:
+          - not_null
+      - name: category_type
+        description: "Tipo da categoria (Player Mode, Steam Features, etc.)"
+      - name: is_single_player
+        description: "Flag para single-player"
+      - name: is_multiplayer
+        description: "Flag para multiplayer"
+      - name: has_controller_support
+        description: "Flag para suporte a controle"
+
+  - name: stg_game_tags
+    description: "Staging model para relacionamento jogos-tags com análise de votos"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: tag_id
+        description: "ID da tag"
+        tests:
+          - not_null
+      - name: tag_votes
+        description: "Número de votos para a tag"
+      - name: vote_tier
+        description: "Nível de votos (Very High, High, Medium, Low, Very Low)"
+      - name: tag_rank_in_game
+        description: "Ranking da tag dentro do jogo"
+      - name: is_top_5_tag
+        description: "Flag indicando se está no top 5 de tags do jogo"
+      - name: normalized_vote_strength
+        description: "Força normalizada dos votos (0-1)"
+
+  - name: stg_game_full_audio_languages
+    description: "Staging model para idiomas com áudio completo"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: language_id
+        description: "ID do idioma"
+        tests:
+          - not_null
+      - name: language_family
+        description: "Família do idioma"
+      - name: market_tier
+        description: "Nível de mercado (Global, Major Regional, Regional, Niche)"
+      - name: has_english_audio
+        description: "Flag para áudio em inglês"
+
+  - name: stg_game_supported_languages
+    description: "Staging model para idiomas suportados com detalhes de interface e legendas"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: language_id
+        description: "ID do idioma"
+        tests:
+          - not_null
+      - name: interface_support
+        description: "Suporte a interface no idioma"
+      - name: subtitles_support
+        description: "Suporte a legendas no idioma"
+      - name: support_type
+        description: "Tipo de suporte (Full Support, Interface Only, Subtitles Only)"
+      - name: support_score
+        description: "Score de suporte (0-3)"
+      - name: language_family
+        description: "Família do idioma"
+
+  - name: stg_price_segments
+    description: "Staging model para segmentos de preço (dados estáticos)"
+    columns:
+      - name: price_segment_key
+        description: "Chave do segmento de preço"
+        tests:
+          - unique
+          - not_null
+      - name: segment_name
+        description: "Nome do segmento (Free, Budget, etc.)"
+        tests:
+          - not_null
+      - name: min_price
+        description: "Preço mínimo do segmento"
+      - name: max_price
+        description: "Preço máximo do segmento"
+      - name: description
+        description: "Descrição do segmento de preço"
+      - name: target_market
+        description: "Mercado alvo do segmento"
+      - name: typical_quality_level
+        description: "Nível de qualidade típico"
+      - name: market_penetration
+        description: "Penetração de mercado"
+      - name: sort_order
+        description: "Ordem para sorting"
+
+  # ===== MODELO LEGADO (PARA COMPATIBILIDADE) =====
+  - name: stg_game_relationships
+    description: "[LEGADO] Staging model unificado para relacionamentos - use os modelos específicos acima"
+    columns:
+      - name: game_id
+        description: "ID do jogo"
+        tests:
+          - not_null
+      - name: related_id
+        description: "ID da dimensão relacionada"
+        tests:
+          - not_null
+      - name: relationship_type
+        description: "Tipo de relacionamento (genre, category, developer, etc.)"
+        tests:
+          - not_null
+      - name: relationship_strength
+        description: "Força do relacionamento (0.0 a 1.0)"
+      - name: is_primary
+        description: "Flag indicando se é relacionamento principal"

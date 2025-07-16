@@ -1,0 +1,563 @@
+x-common-settings: &common-settings
+  restart: "no"
+  cpus: 2
+  mem_limit: 2g
+  memswap_limit: 2g
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "1"
+
+x-airflow-resources: &airflow-resources
+  restart: "no"
+  cpus: 4
+  mem_limit: 8g
+  memswap_limit: 8g
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "1"
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:3.0.2
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-db/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+    # Conexões com o banco de dados source e DW
+    POSTGRES_HOST: ${POSTGRES_HOST}
+    POSTGRES_PORT: ${POSTGRES_PORT}
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    DW_HOST: ${POSTGRES_DW_HOST}
+    DW_PORT: 5432
+    DW_DB: ${POSTGRES_DW_DB}
+    DW_USER: ${POSTGRES_DW_USER}
+    DW_PASSWORD: ${POSTGRES_DW_PASSWORD}
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/config:/opt/airflow/config
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./dbt:/opt/airflow/dbt
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    redis:
+      condition: service_healthy
+    airflow-db:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+    postgres-dw:
+      condition: service_healthy
+
+services:
+
+  # PostgreSQL service (Source Database)
+  postgres:
+    <<: *common-settings
+    build:
+      context: ./postgres
+    container_name: postgres
+    hostname: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGBACKREST_REMOTE_HOST: ${PGBACKREST_REMOTE_HOST}
+      PGBACKREST_REMOTE_USER: ${PGBACKREST_REMOTE_USER}
+    ports:
+      - "5433:5432"
+      - "2221:22"
+    volumes: 
+      - ./scripts/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+      - ./postgres/data:/var/lib/postgresql/data:rw
+      - ./postgres/log:/var/lib/postgresql/log:rw
+      - shared-ssh:/var/lib/postgresql/.ssh:rw
+    networks:
+      rede:
+        ipv4_address: 110.0.0.111
+    extra_hosts:
+      backup: 110.0.0.112
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # BACKUP service usando pgBackRest
+  backup:
+    <<: *common-settings
+    build:
+      context: ./backup
+    container_name: backup
+    hostname: backup
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+    ports:
+      - "2222:22"
+    volumes:
+      - ./backup/data:/var/lib/pgbackrest:rw
+      - ./backup/log:/var/log/pgbackrest:rw
+      - shared-ssh:/var/lib/postgresql/.ssh:rw
+    networks:
+      rede:
+        ipv4_address: 110.0.0.112
+    extra_hosts:
+      postgres: 110.0.0.111
+    healthcheck:
+      test: ["CMD", "pgrep", "sshd"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Data Processing Job (runs once and exits)
+  data-processor:
+    build: .
+    container_name: data-processor
+    hostname: data-processor
+    restart: "no"
+    cpus: 4
+    mem_limit: 6g
+    memswap_limit: 6g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      NODE_OPTIONS: "--max-old-space-size=5120"
+    volumes:
+      - .:/app 
+    networks:
+      rede:
+        ipv4_address: 110.0.0.113
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+  # Data Warehouse PostgreSQL
+  postgres-dw:
+    <<: *airflow-resources
+    build:
+      context: ./dw
+      dockerfile: Dockerfile
+    container_name: postgres-dw
+    hostname: postgres-dw
+    environment:
+      POSTGRES_USER: ${POSTGRES_DW_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DW_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DW_DB}
+    ports:
+      - "${POSTGRES_DW_PORT}:5432"
+    volumes:
+      - ./dw/data:/var/lib/postgresql/data:rw
+      - ./dw/log:/var/lib/postgresql/log:rw
+      - ./dw/relacional.sql:/docker-entrypoint-initdb.d/relacional.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_DW_USER} -d ${POSTGRES_DW_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      rede:
+        ipv4_address: 110.0.0.116
+
+  # Airflow Database
+  airflow-db:
+    <<: *common-settings
+    container_name: airflow-db
+    hostname: airflow-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      rede:
+        ipv4_address: 110.0.0.117
+
+  # Redis for Airflow
+  redis:
+    <<: *common-settings
+    image: redis:7.2-bookworm
+    container_name: airflow-redis
+    hostname: airflow-redis
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    restart: always
+    networks:
+      rede:
+        ipv4_address: 110.0.0.118
+
+  # Airflow Init
+  airflow-init:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-init
+    hostname: airflow-init
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        if [[ -z "${AIRFLOW_UID}" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
+          echo "Using default AIRFLOW_UID=50000"
+          export AIRFLOW_UID=50000
+        fi
+        
+        echo "Creating missing opt dirs if missing:"
+        mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
+        
+        echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
+        chown -R "${AIRFLOW_UID}:0" /opt/airflow/
+        
+        echo "Initializing Airflow database..."
+        airflow db migrate
+        
+        echo "Creating Airflow admin user..."
+        airflow users create \
+          --username airflow \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password airflow
+
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+      _PIP_ADDITIONAL_REQUIREMENTS: ''
+    user: "0:0"
+    networks:
+      rede:
+        ipv4_address: 110.0.0.124
+
+  # Airflow API Server
+  airflow-apiserver:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-apiserver
+    hostname: airflow-apiserver
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    command: api-server
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      rede:
+        ipv4_address: 110.0.0.119
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-scheduler
+    hostname: airflow-scheduler
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      rede:
+        ipv4_address: 110.0.0.120
+
+  # Airflow Worker
+  airflow-worker:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-worker
+    hostname: airflow-worker
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    command: celery worker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+      # Configurações para reduzir uso de memória
+      AIRFLOW__CELERY__WORKER_CONCURRENCY: 2
+      AIRFLOW__CELERY__WORKER_AUTOSCALE: "4,1"
+      AIRFLOW__CORE__PARALLELISM: 8
+      AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 4
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-apiserver:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      rede:
+        ipv4_address: 110.0.0.122
+
+  # Airflow Triggerer
+  airflow-triggerer:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-triggerer
+    hostname: airflow-triggerer
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type TriggererJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      rede:
+        ipv4_address: 110.0.0.123
+
+  # Airflow DAG Processor
+  airflow-dag-processor:
+    <<: [*airflow-common, *airflow-resources]
+    container_name: airflow-dag-processor
+    hostname: airflow-dag-processor
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type DagProcessorJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      rede:
+        ipv4_address: 110.0.0.125
+        
+  # Prometheus
+  prometheus:
+    depends_on:
+      postgresql-exporter:
+        condition: service_started
+    image: prom/prometheus
+    mem_limit: 512m
+    cpus: 0.5
+    container_name: prometheus
+    hostname: prometheus
+    volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus-data:/prometheus
+    command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.wal-compression'
+        - '--storage.tsdb.retention.time=30d'
+        # - '--storage.tsdb.path=/prometheus'
+        # - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+        # - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+        - "9090:9090"
+    networks:
+      rede:
+        ipv4_address: 110.0.0.114
+
+  postgresql-exporter:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgresql-exporter
+    hostname: postgresql-exporter
+    ports:
+        - "9187:9187"
+    environment:
+        DATA_SOURCE_NAME: postgresql://postgres:steampassword@postgres:5432/steam_games?sslmode=disable
+    networks:
+      rede:
+        ipv4_address: 110.0.0.115
+
+  # Grafana
+  grafana:
+    depends_on:
+      prometheus:
+        condition: service_started
+    image: grafana/grafana
+    container_name: grafana
+    hostname: grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:rw
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:rw
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:rw
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: senha
+      GF_USERS_ALLOW_SIGN_UP: false
+    ports:
+        - "4000:3000"
+    networks:
+      rede:
+        ipv4_address: 110.0.0.126
+
+  # Apache Superset
+  superset:
+    build:
+      context: ./superset
+    container_name: superset
+    hostname: superset
+    restart: always
+    depends_on:
+      postgres-dw:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./superset/docker-init.sh:/app/docker/docker-init.sh:ro
+      - superset-data:/app/superset_home
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_ADMIN_USER: ${SUPERSET_ADMIN_USER}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL}
+      SQLALCHEMY_DATABASE_URI: postgresql://${POSTGRES_DW_USER}:${POSTGRES_DW_PASSWORD}@postgres-dw:5432/${POSTGRES_DW_DB}
+    command: ["/app/docker/docker-init.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      rede:
+        ipv4_address: 110.0.0.127
+
+  # PgBadger
+  pgbadger:
+    container_name: pgbadger
+    hostname: pgbadger
+    build:
+      dockerfile: Dockerfile
+      context: ./pgbadger
+      args:
+        - VERSION=12.1 
+    environment:
+      OPTIONS: "--prefix=/var/lib/pgbadger/outdir"
+    volumes:
+      - ./pgbadger/outdir:/var/lib/pgbadger/outdir:rw
+      - ./postgres/log:/var/lib/pgbadger/log:ro
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      rede:
+        ipv4_address: 110.0.0.128
+
+networks:
+  rede:
+    name: rede
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 110.0.0.0/24
+
+volumes:
+  shared-ssh:
+    driver: local
+  postgres-ssh:
+    driver: local
+  backup-ssh:
+    name: backup-ssh
+    driver: local
+  prometheus-data:
+    name: prometheus-data
+    driver: local
+  postgres-db-volume:
+    name: airflow-postgres-pgdata
+    driver: local
+  grafana-data:
+    name: grafana-data
+    driver: local
+  superset-data:
+    name: superset-data
+    driver: local
+  postgres-logs:
+    name: postgres-logs
+    driver: local

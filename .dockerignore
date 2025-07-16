@@ -1,0 +1,48 @@
+node_modules
+.git
+.gitignore
+README.md
+.DS_Store
+Thumbs.db
+*.log
+.vscode
+.idea
+.env
+
+# Logs e dados do Airflow
+airflow/logs/
+airflow/logs/**
+airflow/config/
+
+# Dados persistentes dos bancos
+postgres/data/
+postgres/log/
+dw/data/
+dw/log/
+backup/data/
+backup/log/
+
+# Cache do Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# DBT específico
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Documentação
+docs/
+*.md
+!README.md
+
+# Outputs de processamento
+output/

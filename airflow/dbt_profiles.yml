@@ -1,0 +1,25 @@
+default:
+  target: destination
+
+  outputs:
+    source:
+      type: postgres
+      host: postgres
+      user: postgres
+      password: steampassword
+      port: 5432
+      dbname: steam_games
+      schema: public
+      quoting:
+        database: false
+        schema: true
+        identifier: true
+
+    destination:
+      type: postgres
+      host: postgres-dw
+      user: dw_user
+      password: dw_password123
+      port: 5432
+      dbname: data_warehouse
+      schema: public

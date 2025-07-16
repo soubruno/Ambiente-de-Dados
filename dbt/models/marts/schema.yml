@@ -1,0 +1,154 @@
+version: 2
+
+models:
+  # TABELA FATO CENTRAL
+  - name: fact_games
+    description: "TABELA FATO CENTRAL - Centro do modelo estrela simplificado com todas as métricas dos jogos. Apenas métricas numéricas e chaves estrangeiras."
+    columns:
+      - name: fact_key
+        description: "Chave primária surrogate da tabela fato"
+        tests:
+          - unique
+          - not_null
+      
+      # Chaves estrangeiras
+      - name: game_key
+        description: "Chave estrangeira para dim_game"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_game')
+              field: game_key
+      
+      - name: release_date_key
+        description: "Chave estrangeira para dim_date"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      
+      - name: price_segment_key
+        description: "Chave estrangeira para dim_price_segment"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_price_segment')
+              field: price_segment_key
+      
+      - name: primary_developer_key
+        description: "Chave estrangeira para desenvolvedor principal"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_developer')
+              field: developer_key
+      
+      - name: primary_publisher_key
+        description: "Chave estrangeira para publicador principal"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_publisher')
+              field: publisher_key
+      
+      - name: primary_genre_key
+        description: "Chave estrangeira para gênero principal"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_genre')
+              field: genre_key
+      
+      # Métricas principais
+      - name: current_price
+        description: "Preço atual do jogo"
+        tests:
+          - not_null
+      
+      - name: estimated_owners_avg
+        description: "Estimativa média de proprietários"
+        tests:
+          - not_null
+      
+      - name: metacritic_score
+        description: "Pontuação do Metacritic (0-100)"
+      
+      - name: user_score
+        description: "Pontuação dos usuários"
+      
+      - name: popularity_score
+        description: "Score calculado de popularidade"
+      
+      - name: quality_score
+        description: "Score calculado de qualidade"
+
+  # DIMENSÕES
+  - name: dim_game
+    description: "Dimensão principal de jogos - muitos atributos descritivos."
+    columns:
+      - name: game_key
+        description: "Chave primária surrogate"
+        tests:
+          - unique
+          - not_null
+      
+      - name: game_id
+        description: "ID natural do jogo no Steam"
+        tests:
+          - not_null
+      
+      - name: game_name
+        description: "Nome do jogo"
+        tests:
+          - not_null
+
+  - name: dim_developer
+    description: "Dimensão de desenvolvedores - enriquecida com métricas agregadas e análises de mercado."
+    columns:
+      - name: developer_key
+        description: "Chave primária surrogate"
+        tests:
+          - unique
+          - not_null
+      
+      - name: developer_id
+        description: "ID natural do desenvolvedor"
+        tests:
+          - not_null
+      
+      - name: name
+        description: "Nome do desenvolvedor"
+        tests:
+          - not_null
+
+  - name: dim_publisher
+    description: "Dimensão de publicadores - enriquecida com métricas agregadas e análises de mercado."
+
+  - name: dim_genre
+    description: "Dimensão de gêneros - enriquecida com métricas de mercado e análises de maturidade."
+
+  - name: dim_category
+    description: "Dimensão de categorias - funcionalidades e características dos jogos."
+
+  - name: dim_tag
+    description: "Dimensão de tags - tags definidas pela comunidade com análises de tendência."
+
+  - name: dim_language
+    description: "Dimensão de idiomas - idiomas suportados com análises de mercado."
+
+  - name: dim_date
+    description: "Dimensão de tempo para análises temporais."
+
+  - name: dim_price_segment
+    description: "Dimensão de segmentos de preço."
+
+  # VIEWS ANALÍTICAS
+  - name: view_genre_analytics
+    description: "View analítica para performance de gêneros"
+
+  - name: view_temporal_analytics
+    description: "View analítica temporal"
+
+  - name: view_developer_performance
+    description: "View analítica para performance de desenvolvedores."

@@ -1,0 +1,112 @@
+# Dependências do Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Variáveis de ambiente e configurações sensíveis
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Logs
+logs/
+*.log
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+.tmp/
+.temp/
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos de cache
+.cache/
+.parcel-cache/
+
+# Diretórios de build/output (se houver)
+dist/
+build/
+
+# Arquivos de backup
+*.bak
+*.backup
+
+# Arquivos específicos do Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# Arquivos específicos do macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Arquivos específicos do Linux
+*~
+
+# Arquivos de dados sensíveis ou grandes (descomente se necessário)
+# data/*.csv
+# output/*.csv
+
+# Dumps de banco de dados
+*.sql.gz
+*.dump
+backup.sql
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Airflow específico
+airflow/logs/
+airflow/config/webserver_config.py
+
+# DBT específico
+dbt/dbt_packages/
+dbt/target/
+dbt/logs/
+dbt/package-lock.yml
+
+# Data Warehouse específico
+dw/data/
+dw/log/
+postgres/data/
+postgres/log/
+backup/data/
+backup/log/

@@ -1,0 +1,46 @@
+name: 'steam_dw'
+version: '1.0.0'
+config-version: 2
+profile: 'default'
+
+# Diretórios do projeto
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+dispatch:
+  - macro_namespace: dbt
+    search_order: ['steam_dw', 'dbt']
+
+# Configurações de build
+target-path: "target"
+clean-targets: ["target", "dbt_modules", "logs", "dbt_packages"]
+
+# Configurações dos modelos 
+models:
+  steam_dw:
+    staging:
+      materialized: view
+      +schema: staging
+
+    marts:
+      materialized: table
+      +schema: marts
+
+# Configurações dos seeds
+seeds:
+  steam_dw:
+    +schema: raw
+
+# Configurações dos snapshots
+snapshots:
+  steam_dw:
+    +target_schema: snapshots
+
+# Variáveis do projeto
+vars:
+  # Configurações de timezone
+  "dbt_date:time_zone": "America/Sao_Paulo"
